@@ -21,6 +21,7 @@ from gevent.pywsgi import WSGIServer
 monkey.patch_all()
 
 UPLOAD_FOLDER = os.path.split(os.path.realpath(__file__))[0]+"/upload"
+WORKING_FOLDR = os.path.split(os.path.realpath(__file__))[0]
 print("You can find the uploaded files from the path: %s" % UPLOAD_FOLDER)
 
 if not os.path.isdir(UPLOAD_FOLDER):
@@ -82,7 +83,7 @@ def port_checker(port):
 
 # check the default ports
 def get_port():
-    port = [80, 8080, 1234, 12345, 4321, 54321]
+    port = [8080, 1234, 12345, 4321, 54321]
     run_port = 0
     for i in range(len(port)):
         if port_checker(port[i]):
@@ -90,18 +91,47 @@ def get_port():
             break
     return run_port
 
+def download_ngrolk():
+    # if there is no ngrok, download the file
+    if not os.path.exists(os.path.join(WORKING_FOLDR,'ngrok')):
+        print('download')
+        import re
+        import time
+        from io import BytesIO
+        from urllib.request import urlopen
+        from urllib.parse import urlparse
+        from zipfile import ZipFile
+        from bs4 import BeautifulSoup as bs
+
+        # check the zip file path from ngrok
+        url = 'https://ngrok.com/download'
+        html = requests.get(url=url)
+        soup = bs(html.text, "html.parser")
+        os_name = sys.platform
+        os_bit = 'amd64' if sys.maxsize == (2 ** 63 - 1) else '386'
+        download_url = soup.find('a', href=re.compile(os_name + '.*' + os_bit))['href']
+
+        # unzip without download
+        print('unzip file path: %s' % WORKING_FOLDR)
+        with urlopen(download_url) as zipresp:
+            with ZipFile(BytesIO(zipresp.read())) as zfile:
+                zfile.extractall(WORKING_FOLDR)
+
+        time.sleep(10)
+        while(not os.path.exists(os.path.join(WORKING_FOLDR,'ngrok'))):
+            print('sleep')
+            time.sleep(10)
+
+        # to add permission for ngrok
+        subprocess.Popen('chmod 0777 %s' % os.path.join(WORKING_FOLDR,'ngrok'),shell=True)
+    else:
+        print('pass')
+        pass
+
 # check ngork and run
 def enable_ngork(port):
-    config_name = 'ngrok'
-    application_path =''
-    # determine if application is a script file or frozen exe
-    if getattr(sys, 'frozen', False):
-        application_path = os.path.dirname(sys.executable)
-    elif __file__:
-        application_path = os.path.dirname(__file__)
-
-    config_path = os.path.join(application_path, config_name)
-
+    config_path = os.path.join(WORKING_FOLDR,'ngrok')
+    print(config_path)
     if os.path.isfile(config_path):
         cmd = '%s http %s' % (config_path,port)
         result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
@@ -118,6 +148,7 @@ def enable_ngork(port):
 
 if __name__ == "__main__":
     run_port = get_port()
+    download_ngrolk()
     ngork_status = enable_ngork(run_port)
     if ngork_status!=False:
         print('You can access the server by %s' % ngork_status)

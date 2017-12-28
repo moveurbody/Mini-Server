@@ -94,7 +94,7 @@ def get_port():
 def download_ngrolk():
     # if there is no ngrok, download the file
     if not os.path.exists(os.path.join(WORKING_FOLDR,'ngrok')):
-        print('download')
+        print('ngrok is downloading...')
         import re
         import time
         from io import BytesIO
@@ -117,13 +117,14 @@ def download_ngrolk():
             with ZipFile(BytesIO(zipresp.read())) as zfile:
                 zfile.extractall(WORKING_FOLDR)
 
-        time.sleep(10)
+        time.sleep(20)
         while(not os.path.exists(os.path.join(WORKING_FOLDR,'ngrok'))):
             print('sleep')
             time.sleep(10)
 
         # to add permission for ngrok
-        subprocess.Popen('chmod 0777 %s' % os.path.join(WORKING_FOLDR,'ngrok'),shell=True)
+        process = subprocess.Popen('chmod 0777 %s' % os.path.join(WORKING_FOLDR,'ngrok'),shell=True)
+        process.wait()
     else:
         print('pass')
         pass

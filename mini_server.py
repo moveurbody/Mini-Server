@@ -1,20 +1,25 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2017/2/18 下午2:51
-# @Author  : Yuhsuan
-# @File    : test.py
+# @Author  : moveurbody
+# @File    : mini_server.py
 # @Software: PyCharm Community Edition
 
 import os
+import sys
+import time
+import subprocess
+
+import socket
+import requests
 import netifaces as ni
 from flask import Flask, request, redirect, url_for, send_file
 
-import socket
-
+# async
 from gevent import monkey
 from gevent.pywsgi import WSGIServer
+
 monkey.patch_all()
 
-# UPLOAD_FOLDER = os.getcwd()+"/upload"
 UPLOAD_FOLDER = os.path.split(os.path.realpath(__file__))[0]+"/upload"
 print("You can find the uploaded files from the path: %s" % UPLOAD_FOLDER)
 
@@ -24,6 +29,7 @@ if not os.path.isdir(UPLOAD_FOLDER):
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
+# index
 @app.route("/", methods=['GET'])
 def index():
     file_list = []
@@ -42,10 +48,17 @@ def index():
     <p>%s</p>
     """ % "".join(file_list)
 
+# prevent the server can't get favicon.ico and show error in the console
+@app.route("/favicon.ico",methods=['GET'])
+def favicon():
+    return ''
+
+# let user to get the file
 @app.route("/<file_name>", methods=['GET'])
 def download(file_name):
     return send_file(app.config['UPLOAD_FOLDER']+'/'+file_name)
 
+# let user upload file
 @app.route("/", methods=['POST'])
 def index_post():
     for upload in request.files.getlist("file"):
@@ -56,26 +69,61 @@ def index_post():
         upload.save(destination)
     return redirect(url_for('index'))
 
+# check which port can be used
 def port_checker(port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     result = sock.connect_ex(('0.0.0.0', port))
     if result == 0:
-        print("Port %s is open" % port)
+        # print("Port %s is open" % port)
         return False
     else:
-        print("Port %s is not open" % port)
+        # print("Port %s is not open" % port)
         return True
 
-
-if __name__ == "__main__":
-    port = [12345,8080,1234,4321,12345,54321]
+# check the default ports
+def get_port():
+    port = [80, 8080, 1234, 12345, 4321, 54321]
     run_port = 0
     for i in range(len(port)):
         if port_checker(port[i]):
             run_port = port[i]
             break
+    return run_port
+
+# check ngork and run
+def enable_ngork(port):
+    config_name = 'ngrok_mac'
+    application_path =''
+    # determine if application is a script file or frozen exe
+    if getattr(sys, 'frozen', False):
+        application_path = os.path.dirname(sys.executable)
+    elif __file__:
+        application_path = os.path.dirname(__file__)
+
+    config_path = os.path.join(application_path, config_name)
+
+    if os.path.isfile(config_path):
+        cmd = '%s http %s' % (config_path,port)
+        result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
+
+        time.sleep(3)
+
+        url = 'http://127.0.0.1:4040/api/tunnels'
+        res = requests.get(url=url)
+        link = res.json()['tunnels'][0]['public_url']
+        return link
+    else:
+        print("Can't find ngork service, you can access the file by intranet only.")
+        return False
+
+if __name__ == "__main__":
+    run_port = get_port()
+    ngork_status = enable_ngork(run_port)
+    if ngork_status!=False:
+        print('You can access the server by %s' % ngork_status)
 
     ip = ni.ifaddresses('en0')[2][0]['addr']
-    print("Please open the url to upload file. http://%s:%s" % (ip,run_port))
+    if ngork_status == False:
+        print("Please open the url to upload file. http://%s:%s" % (ip,run_port))
     http_server = WSGIServer(('', run_port), app)
     http_server.serve_forever()

@@ -92,7 +92,7 @@ def get_port():
 
 # check ngork and run
 def enable_ngork(port):
-    config_name = 'ngrok_mac'
+    config_name = 'ngrok'
     application_path =''
     # determine if application is a script file or frozen exe
     if getattr(sys, 'frozen', False):

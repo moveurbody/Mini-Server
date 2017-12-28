@@ -1,9 +1,9 @@
 # Mini-Server
-It's a http server for user to upload and share files
+It's a http server for user to upload and share files!
 
 ## usage
 ===
-If you want run the service for INTRANET ONLY, you can use below command
+If you want run the service for INTRANET ONLY, you can use below command:
 
 ```
 python mini_server.py

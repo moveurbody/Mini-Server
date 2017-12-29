@@ -152,10 +152,15 @@ if __name__ == "__main__":
     download_ngrolk()
     ngork_status = enable_ngork(run_port)
     if ngork_status!=False:
-        print('You can access the server by %s' % ngork_status)
-
-    ip = ni.ifaddresses('en0')[2][0]['addr']
-    if ngork_status == False:
-        print("Please open the url to upload file. http://%s:%s" % (ip,run_port))
+        print('Please open the url to upload file from %s' % ngork_status)
+    try:
+        if sys.platform =='linux':
+            ip = ni.ifaddresses('eth0')[2][0]['addr']
+        elif sys.platform == 'darwin':
+            ip = ni.ifaddresses('en0')[2][0]['addr']
+    except Exception as e:
+        print(e)
+    # if ngork_status == False:
+    print("Please open the url to upload file. http://%s:%s" % (ip,run_port))
     http_server = WSGIServer(('', run_port), app)
     http_server.serve_forever()

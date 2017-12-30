@@ -126,13 +126,12 @@ def download_ngrolk():
         process = subprocess.Popen('chmod 0777 %s' % os.path.join(WORKING_FOLDR,'ngrok'),shell=True)
         process.wait()
     else:
-        print('pass')
         pass
 
 # check ngork and run
 def enable_ngork(port):
     config_path = os.path.join(WORKING_FOLDR,'ngrok')
-    print(config_path)
+    # print(config_path)
     if os.path.isfile(config_path):
         cmd = '%s http %s' % (config_path,port)
         result = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
